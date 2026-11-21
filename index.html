@@ -1,0 +1,131 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Shooter Asset Library — Free CC0 3D Game Assets (GLB)</title>
+<style>
+  :root{
+    --bg:#0b0e13; --panel:#12161e; --panel2:#161b25; --line:#232a37;
+    --text:#e8ecf3; --muted:#8b96a8; --accent:#4f8cff; --accent2:#7bd88f;
+  }
+  *{box-sizing:border-box}
+  body{margin:0;background:var(--bg);color:var(--text);
+       font:15px/1.5 system-ui,-apple-system,'Segoe UI',Roboto,sans-serif}
+  header{padding:28px 20px 16px;max-width:1280px;margin:0 auto}
+  h1{margin:0 0 6px;font-size:clamp(20px,4vw,30px);letter-spacing:.2px}
+  h1 span{color:var(--accent)}
+  .sub{color:var(--muted);margin:0 0 4px}
+  .stats{display:flex;flex-wrap:wrap;gap:10px;margin-top:12px}
+  .stat{background:var(--panel);border:1px solid var(--line);border-radius:10px;
+        padding:8px 14px;font-size:13px}
+  .stat b{color:var(--accent2);font-size:15px}
+  .gh{position:absolute;top:16px;right:16px;color:var(--muted);text-decoration:none;
+      border:1px solid var(--line);border-radius:8px;padding:6px 10px;font-size:13px}
+  .gh:hover{color:var(--text);border-color:var(--accent)}
+  .bar{position:sticky;top:0;z-index:5;background:rgba(11,14,19,.92);backdrop-filter:blur(6px);
+       border-bottom:1px solid var(--line);padding:10px 20px}
+  .bar-in{max-width:1280px;margin:0 auto;display:flex;flex-wrap:wrap;gap:8px;align-items:center}
+  input{background:var(--panel);border:1px solid var(--line);color:var(--text);
+        border-radius:8px;padding:8px 12px;font-size:14px;min-width:180px;flex:1;max-width:320px}
+  input:focus{outline:none;border-color:var(--accent)}
+  .tab{background:var(--panel);border:1px solid var(--line);color:var(--muted);
+       border-radius:20px;padding:6px 13px;font-size:13px;cursor:pointer;white-space:nowrap}
+  .tab.on{background:var(--accent);border-color:var(--accent);color:#fff}
+  main{max-width:1280px;margin:0 auto;padding:18px 20px 60px}
+  .grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:12px}
+  .card{background:var(--panel);border:1px solid var(--line);border-radius:12px;overflow:hidden;
+        cursor:pointer;transition:transform .12s ease,border-color .12s ease;display:block;
+        text-decoration:none;color:var(--text)}
+  .card:hover{transform:translateY(-3px);border-color:var(--accent)}
+  .card img{width:100%;aspect-ratio:1;display:block;background:var(--panel2);object-fit:cover}
+  .card .nm{padding:8px 10px 2px;font-size:12.5px;font-weight:600;
+            white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .card .pk{padding:0 10px 9px;font-size:11px;color:var(--muted);
+            white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  footer{max-width:1280px;margin:0 auto;padding:20px;color:var(--muted);font-size:13px;
+         border-top:1px solid var(--line)}
+  .empty{color:var(--muted);padding:40px;text-align:center}
+</style>
+</head>
+<body>
+<header>
+  <a class="gh" href="https://github.com/Touhid-HZ/shooter-asset-library" target="_blank">★ GitHub</a>
+  <h1>Shooter Asset <span>Library</span></h1>
+  <p class="sub">Free <b>CC0</b> 3D game-ready assets for FPS / shooter games —
+     weapons, characters, enemies, vehicles, city &amp; nature environments, props.
+     Every model is <b>.glb</b> with a rendered preview and an interactive 3D viewer.</p>
+  <div class="stats" id="stats"></div>
+</header>
+
+<div class="bar"><div class="bar-in">
+  <input id="q" type="search" placeholder="Search models… (e.g. rifle, zombie, tree)">
+  <div id="tabs" style="display:flex;gap:8px;flex-wrap:wrap"></div>
+</div></div>
+
+<main>
+  <div class="grid" id="grid"></div>
+  <div class="empty" id="empty" hidden>No models match your search.</div>
+</main>
+
+<footer>
+  All assets are <b>CC0 / public domain</b> by <a href="https://kenney.nl" target="_blank">Kenney</a>
+  and <a href="https://quaternius.com" target="_blank">Quaternius</a> · packaged with per-file
+  previews and an interactive viewer · <a href="ATTRIBUTION.md">attribution</a>
+</footer>
+
+<script>
+let MODELS = [], cat = 'all';
+const grid = document.getElementById('grid'), tabs = document.getElementById('tabs');
+
+async function init(){
+  const r = await fetch('assets/manifest.json');
+  MODELS = await r.json();
+  // stats
+  const cats = {};
+  for (const m of MODELS) cats[m.category] = (cats[m.category]||0)+1;
+  document.getElementById('stats').innerHTML =
+    `<div class="stat"><b>${MODELS.length.toLocaleString()}</b> models</div>` +
+    `<div class="stat"><b>${Object.keys(cats).length}</b> categories</div>` +
+    `<div class="stat"><b>${new Set(MODELS.map(m=>m.pack)).size}</b> source packs</div>` +
+    `<div class="stat">license <b>CC0</b></div>` +
+    `<div class="stat">format <b>glTF 2.0 (.glb)</b></div>`;
+  // tabs
+  const mk = (id,label) => {
+    const b = document.createElement('button');
+    b.className = 'tab' + (cat===id?' on':'');
+    b.textContent = label;
+    b.onclick = () => { cat = id; document.querySelectorAll('.tab').forEach(t=>t.classList.remove('on')); b.classList.add('on'); render(); };
+    return b;
+  };
+  tabs.appendChild(mk('all', `All (${MODELS.length.toLocaleString()})`));
+  for (const [c,n] of Object.entries(cats).sort((a,b)=>b[1]-a[1]))
+    tabs.appendChild(mk(c, `${c.replace('-',' ')} (${n.toLocaleString()})`));
+  render();
+}
+
+function render(){
+  const q = document.getElementById('q').value.trim().toLowerCase();
+  const list = MODELS.filter(m =>
+    (cat==='all' || m.category===cat) &&
+    (!q || m.name.toLowerCase().includes(q) || (m.pack||'').toLowerCase().includes(q)));
+  document.getElementById('empty').hidden = list.length>0;
+  grid.innerHTML = '';
+  const frag = document.createDocumentFragment();
+  for (const m of list){
+    const a = document.createElement('a');
+    a.className = 'card';
+    a.href = `viewer.html?src=${encodeURIComponent(m.src)}&name=${encodeURIComponent(m.name)}&cat=${encodeURIComponent(m.category)}&pack=${encodeURIComponent(m.pack||'')}`;
+    a.innerHTML = `<img loading="lazy" src="${m.preview}" alt="${m.name}">
+      <div class="nm">${m.name.replace(/^(k|q)-/,'')}</div>
+      <div class="pk">${m.pack||''}</div>`;
+    frag.appendChild(a);
+  }
+  grid.appendChild(frag);
+}
+
+document.getElementById('q').addEventListener('input', render);
+init();
+</script>
+</body>
+</html>

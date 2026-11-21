@@ -1,0 +1,159 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>3D Viewer — Shooter Asset Library</title>
+<style>
+  :root{--bg:#0b0e13;--panel:#12161e;--line:#232a37;--text:#e8ecf3;--muted:#8b96a8;--accent:#4f8cff}
+  *{box-sizing:border-box}
+  body{margin:0;background:var(--bg);color:var(--text);
+       font:15px/1.5 system-ui,-apple-system,'Segoe UI',Roboto,sans-serif;height:100vh;
+       display:flex;flex-direction:column;overflow:hidden}
+  .top{display:flex;align-items:center;gap:12px;padding:10px 16px;
+       border-bottom:1px solid var(--line);background:var(--panel);flex-wrap:wrap}
+  .back{color:var(--muted);text-decoration:none;border:1px solid var(--line);
+        border-radius:8px;padding:6px 10px;font-size:13px;white-space:nowrap}
+  .back:hover{color:var(--text);border-color:var(--accent)}
+  .title{font-weight:600;font-size:15px;flex:1;min-width:120px;overflow:hidden;
+         text-overflow:ellipsis;white-space:nowrap}
+  .title small{display:block;font-weight:400;color:var(--muted);font-size:12px}
+  .btn{color:#fff;text-decoration:none;background:var(--accent);border:none;
+       border-radius:8px;padding:7px 13px;font-size:13px;cursor:pointer;white-space:nowrap}
+  .btn.ghost{background:transparent;border:1px solid var(--line);color:var(--muted)}
+  .btn.ghost.on{border-color:var(--accent);color:var(--accent)}
+  #stage{flex:1;position:relative}
+  canvas{width:100%;height:100%;display:block;touch-action:none}
+  #hint{position:absolute;bottom:12px;left:50%;transform:translateX(-50%);
+        color:var(--muted);font-size:12px;background:rgba(11,14,19,.7);
+        padding:5px 12px;border-radius:14px;pointer-events:none}
+  #load{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;
+        color:var(--muted);font-size:14px}
+</style>
+<script type="importmap">
+{
+  "imports": {
+    "three": "https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.module.js",
+    "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.160.0/examples/jsm/"
+  }
+}
+</script>
+</head>
+<body>
+<div class="top">
+  <a class="back" href="index.html">← Gallery</a>
+  <div class="title" id="title">Loading…<small id="sub"></small></div>
+  <button class="btn ghost on" id="spin" title="Toggle auto-rotate">⟳ Spin</button>
+  <button class="btn ghost" id="gridbtn" title="Toggle grid">▦ Grid</button>
+  <a class="btn" id="dl" download>⬇ Download .glb</a>
+</div>
+<div id="stage">
+  <div id="load">Loading model…</div>
+  <div id="hint">drag to rotate · scroll / pinch to zoom · right-drag to pan</div>
+</div>
+
+<script type="module">
+import * as THREE from 'three';
+import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
+import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
+
+const q = new URLSearchParams(location.search);
+const src = q.get('src');
+const name = q.get('name') || 'model';
+const cat = q.get('cat') || '';
+const pack = q.get('pack') || '';
+
+document.getElementById('title').childNodes[0].textContent = name.replace(/^(k|q)-/,'');
+document.getElementById('sub').textContent = [cat, pack, 'CC0'].filter(Boolean).join(' · ');
+const dl = document.getElementById('dl');
+dl.href = src;
+dl.setAttribute('download', name + '.glb');
+
+const stage = document.getElementById('stage');
+const renderer = new THREE.WebGLRenderer({ antialias:true });
+renderer.outputColorSpace = THREE.SRGBColorSpace;
+stage.appendChild(renderer.domElement);
+
+const scene = new THREE.Scene();
+scene.background = new THREE.Color(0x0b0e13);
+scene.fog = new THREE.Fog(0x0b0e13, 40, 120);
+
+const camera = new THREE.PerspectiveCamera(35, 1, 0.01, 2000);
+const controls = new OrbitControls(camera, renderer.domElement);
+controls.enableDamping = true;
+controls.autoRotate = true;
+controls.autoRotateSpeed = 1.6;
+
+scene.add(new THREE.HemisphereLight(0xdfe8ff, 0x30281e, 1.15));
+const key = new THREE.DirectionalLight(0xffffff, 2.4); key.position.set(3,5,4); scene.add(key);
+const fill = new THREE.DirectionalLight(0xbfd4ff, 0.9); fill.position.set(-4,2,-3); scene.add(fill);
+
+let grid = null;
+function addGrid(center, size){
+  const maxDim = Math.max(size.x, size.z) || 1;
+  const g = new THREE.GridHelper(Math.ceil(maxDim*4/ (maxDim>50?50:5))*(maxDim>50?50:5), 20, 0x2a3346, 0x1a2130);
+  g.position.set(center.x, 0, center.z);
+  scene.add(g);
+  grid = g;
+}
+
+function resize(){
+  const w = stage.clientWidth, h = stage.clientHeight;
+  renderer.setSize(w, h, false);
+  renderer.setPixelRatio(Math.min(devicePixelRatio, 2));
+  camera.aspect = w/h;
+  camera.updateProjectionMatrix();
+}
+window.addEventListener('resize', resize);
+
+new GLTFLoader().load(src, (gltf)=>{
+  const root = gltf.scene;
+  scene.add(root);
+  const box = new THREE.Box3().setFromObject(root);
+  const size = box.getSize(new THREE.Vector3());
+  const center = box.getCenter(new THREE.Vector3());
+  // sit the model on the grid if it is near the origin plane
+  const maxDim = Math.max(size.x, size.y, size.z) || 1;
+  const dist = (maxDim/2)/Math.tan(THREE.MathUtils.degToRad(camera.fov/2))*1.5;
+  const az = THREE.MathUtils.degToRad(35), el = THREE.MathUtils.degToRad(20);
+  camera.position.set(center.x + dist*Math.cos(el)*Math.sin(az),
+                      center.y + dist*Math.sin(el),
+                      center.z + dist*Math.cos(el)*Math.cos(az));
+  camera.near = dist/100; camera.far = dist*100;
+  camera.lookAt(center);
+  controls.target.copy(center);
+  addGrid(center, size);
+  if (gltf.animations && gltf.animations.length){
+    const mixer = new THREE.AnimationMixer(root);
+    mixer.clipAction(gltf.animations[0]).play();
+    mixers.push(mixer);
+    document.getElementById('sub').textContent += ` · ${gltf.animations.length} animation(s)`;
+  }
+  document.getElementById('load').style.display = 'none';
+  resize();
+}, undefined, (err)=>{
+  document.getElementById('load').textContent = 'Failed to load model: ' + (err && err.message || err);
+});
+
+const mixers = [];
+const clock = new THREE.Clock();
+(function tick(){
+  requestAnimationFrame(tick);
+  const dt = clock.getDelta();
+  for (const m of mixers) m.update(dt);
+  controls.update();
+  renderer.render(scene, camera);
+})();
+
+document.getElementById('spin').onclick = (e)=>{
+  controls.autoRotate = !controls.autoRotate;
+  e.target.classList.toggle('on', controls.autoRotate);
+};
+document.getElementById('gridbtn').onclick = (e)=>{
+  if (grid) grid.visible = !grid.visible;
+  e.target.classList.toggle('on', grid && grid.visible);
+};
+resize();
+</script>
+</body>
+</html>
