@@ -75,8 +75,7 @@ renderer.outputColorSpace = THREE.SRGBColorSpace;
 stage.appendChild(renderer.domElement);
 
 const scene = new THREE.Scene();
-scene.background = new THREE.Color(0x0b0e13);
-scene.fog = new THREE.Fog(0x0b0e13, 40, 120);
+scene.background = new THREE.Color(0xd8dde5);
 
 const camera = new THREE.PerspectiveCamera(35, 1, 0.01, 2000);
 const controls = new OrbitControls(camera, renderer.domElement);
@@ -93,7 +92,7 @@ const rim = new THREE.DirectionalLight(0xffffff, 2.0); rim.position.set(-2,3,-5)
 let grid = null;
 function addGrid(center, size){
   const maxDim = Math.max(size.x, size.z) || 1;
-  const g = new THREE.GridHelper(Math.ceil(maxDim*4/ (maxDim>50?50:5))*(maxDim>50?50:5), 20, 0x2a3346, 0x1a2130);
+  const g = new THREE.GridHelper(Math.ceil(maxDim*4/ (maxDim>50?50:5))*(maxDim>50?50:5), 20, 0x8f99a8, 0xb9c0cc);
   g.position.set(center.x, 0, center.z);
   scene.add(g);
   grid = g;
